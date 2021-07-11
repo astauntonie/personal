@@ -1,0 +1,1 @@
+This folder should contain a local copy of the ISO files for the packer *_local.json files. Used to remove the requirement to download an ISO for every install.
