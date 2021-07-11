@@ -2,7 +2,7 @@
   "variables": {
       "boot_wait": "5s",
       "disk_size": "40960",
-      "iso_checksum": "ad6db5cd44da17d055b0803fd2d4090ffe69b0db57ca346148ee400e8285d31c",
+      "iso_checksum": "0de5f12eba93e00fefc06cdb0aa4389a0972a4212977362ea18bde46a1a1aa4f",
       "iso_checksum_type": "sha256",
       "memsize": "2048",
       "numvcpus": "2",
@@ -16,7 +16,7 @@
         "type": "vmware-iso",
         "name": "vmware",
         "boot_command": [
-          "e<down><down><end><bs><bs><bs><bs><bs>text inst.ks=http://{{ .HTTPIP }}:{{ .HTTPPort }}/rocky/ks8_4_online.cfg<leftCtrlOn>x<leftCtrlOff>"
+          "<tab> text inst.ks=http://{{ .HTTPIP }}:{{ .HTTPPort }}/rocky/ks8_4_online.cfg<enter><wait>"
         ],
         "boot_wait": "{{ user `boot_wait` }}",
         "disk_size": "{{ user `disk_size` }}",
@@ -39,7 +39,7 @@
         "type": "virtualbox-iso",
         "name": "virtualbox",
         "boot_command": [
-          "e<down><down><end><bs><bs><bs><bs><bs>text inst.ks=http://{{ .HTTPIP }}:{{ .HTTPPort }}/rocky/ks8_4.cfg<leftCtrlOn>x<leftCtrlOff>"
+          "<tab> text inst.ks=http://{{ .HTTPIP }}:{{ .HTTPPort }}/rocky/ks8_4_online.cfg<enter><wait>"
         ],
         "boot_wait": "{{ user `boot_wait` }}",
         "disk_size": "{{ user `disk_size` }}",
@@ -62,8 +62,7 @@
           ["modifyvm", "{{.Name}}", "--memory", "{{ user `memsize` }}"],
           ["modifyvm", "{{.Name}}", "--cpus", "{{ user `numvcpus` }}"],
           ["modifyvm", "{{.Name}}", "--graphicscontroller", "vmsvga"],
-          ["modifyvm", "{{.Name}}", "--vram", "16"],
-          ["modifyvm", "{{.Name}}", "--nic1", "bridged"]
+          ["modifyvm", "{{.Name}}", "--vram", "16"]
         ]
       },
       {
@@ -83,7 +82,7 @@
         "shutdown_command": "echo '{{user `ssh_password`}}'|sudo -S /sbin/halt -h -p",
         "boot_wait": "{{ user `boot_wait` }}",
         "boot_command": [
-          "e<down><down><end><bs><bs><bs><bs><bs>text inst.ks=http://{{ .HTTPIP }}:{{ .HTTPPort }}/rocky/ks8_4.cfg<leftCtrlOn>x<leftCtrlOff>"
+          "<tab> text inst.ks=http://{{ .HTTPIP }}:{{ .HTTPPort }}/rocky/ks8_4_online.cfg<enter><wait>"
           ]
       }
     ],
@@ -102,9 +101,9 @@
       "type": "shell",
       "execute_command": "echo '{{user `ssh_password`}}'|{{.Vars}} sudo -S -E bash '{{.Path}}'",
       "scripts": [
-            "scripts/vagrant.sh",
-            "scripts/cleanup.sh",
-            "scripts/zerodisk.sh"
+            "scripts/bash/vagrant.sh",
+            "scripts/bash/cleanup.sh",
+            "scripts/bash/zerodisk.sh"
       ]
     }
   ]
