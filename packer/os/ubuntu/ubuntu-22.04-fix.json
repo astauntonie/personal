@@ -1,0 +1,388 @@
+{
+  "builders": [
+    {
+      "type": "virtualbox-vm",
+      "communicator": "ssh",
+      "headless": "{{user `headless`}}",
+      "ssh_username": "{{user `ssh_user`}}",
+      "ssh_password": "{{user `ssh_pass`}}",
+      "ssh_timeout": "2h",
+      "shutdown_command": "shutdown",
+      "guest_additions_mode": "disable",
+      "output_directory": "./builds-vm",
+      "vm_name": "{{user `target_vm`}}",
+      "attach_snapshot": "Clean",
+      "target_snapshot": "Provisioned",
+      "force_delete_snapshot": "true",
+      "keep_registered": "true",
+      "skip_export": "false"
+    }
+  ],
+  "post-processors": [
+    {
+      "keep_input_artifact": true,
+      "only": [
+        "virtualbox-vm"
+      ],
+      "output": "./builds/{{user `box_name`}}-virtualbox.box",
+      "type": "vagrant"
+    }
+  ],
+  "provisioners": [
+    {
+      "environment_vars": [
+        "HOME_DIR=/home/vagrant"
+      ],
+      "execute_command": "echo 'vagrant' | {{.Vars}} sudo -S -E sh -eux '{{.Path}}'",
+      "expect_disconnect": true,
+      "scripts": [
+        "scripts/bash/ubuntu/update.sh",
+        "scripts/bash/ubuntu/sudoers.sh",
+        "scripts/bash/ubuntu/vagrant.sh",
+        "scripts/bash/ubuntu/virtualbox.sh",
+        "scripts/bash/ubuntu/cleanup.sh",
+        "scripts/bash/ubuntu/minimize.sh"
+      ],
+      "type": "shell"
+    },
+    {
+      "type": "shell",
+      "inline": [
+          "mkdir -p {{user `image_folder`}}",
+          "chmod 777 {{user `image_folder`}}"
+      ],
+      "execute_command": "sudo sh -c '{{ .Vars }} {{ .Path }}'"
+  },
+  {
+      "type": "shell",
+      "script": "scripts/azure/base/apt-mock.sh",
+      "execute_command": "sudo sh -c '{{ .Vars }} {{ .Path }}'"
+  },
+  {
+      "type": "shell",
+      "scripts": [
+          "scripts/azure/base/repos.sh"
+      ],
+      "environment_vars": [
+          "DEBIAN_FRONTEND=noninteractive"
+      ],
+      "execute_command": "sudo sh -c '{{ .Vars }} {{ .Path }}'"
+  },
+  {
+      "type": "shell",
+      "script": "scripts/azure/base/apt.sh",
+      "environment_vars": [
+          "DEBIAN_FRONTEND=noninteractive"
+      ],
+      "execute_command": "sudo sh -c '{{ .Vars }} {{ .Path }}'"
+  },
+  {
+      "type": "shell",
+      "script": "scripts/azure/base/limits.sh",
+      "execute_command": "sudo sh -c '{{ .Vars }} {{ .Path }}'"
+  },
+  {
+      "type": "file",
+      "source": "scripts/azure/helpers",
+      "destination": "{{user `helper_script_folder`}}"
+  },
+  {
+      "type": "file",
+      "source": "scripts/azure/installers",
+      "destination": "{{user `installer_script_folder`}}"
+  },
+  {
+      "type": "file",
+      "source": "scripts/azure/post-generation",
+      "destination": "{{user `image_folder`}}"
+  },
+  {
+      "type": "file",
+      "source": "scripts/azure/tests",
+      "destination": "{{user `image_folder`}}"
+  },
+  {
+      "type": "file",
+      "source": "scripts/azure/SoftwareReport",
+      "destination": "{{user `image_folder`}}"
+  },
+  {
+      "type": "file",
+      "source": "scripts/azure/helpers/software-report-base",
+      "destination": "{{user `image_folder`}}/SoftwareReport/"
+  },
+  {
+      "type": "file",
+      "source": "scripts/azure/toolsets/toolset-2204.json",
+      "destination": "{{user `installer_script_folder`}}/toolset.json"
+  },
+  {
+      "type": "shell",
+      "scripts": [
+          "scripts/azure/installers/preimagedata.sh"
+      ],
+      "environment_vars": [
+          "IMAGE_VERSION={{user `image_version`}}",
+          "IMAGEDATA_FILE={{user `imagedata_file`}}"
+      ],
+      "execute_command": "sudo sh -c '{{ .Vars }} {{ .Path }}'"
+  },
+  {
+      "type": "shell",
+      "scripts": [
+          "scripts/azure/installers/configure-environment.sh"
+      ],
+      "environment_vars": [
+          "IMAGE_VERSION={{user `image_version`}}",
+          "IMAGE_OS={{user `image_os`}}",
+          "HELPER_SCRIPTS={{user `helper_script_folder`}}"
+      ],
+      "execute_command": "sudo sh -c '{{ .Vars }} {{ .Path }}'"
+  },
+  {
+      "type": "shell",
+      "scripts": [
+          "scripts/azure/installers/complete-snap-setup.sh",
+          "scripts/azure/installers/powershellcore.sh"
+      ],
+      "environment_vars": [
+          "HELPER_SCRIPTS={{user `helper_script_folder`}}"
+      ],
+      "execute_command": "sudo sh -c '{{ .Vars }} {{ .Path }}'"
+  },
+  {
+      "type": "shell",
+      "scripts": [
+          "scripts/azure/installers/Install-PowerShellModules.ps1",
+          "scripts/azure/installers/Install-AzureModules.ps1"
+      ],
+      "environment_vars": [
+          "HELPER_SCRIPTS={{user `helper_script_folder`}}",
+          "INSTALLER_SCRIPT_FOLDER={{user `installer_script_folder`}}"
+      ],
+      "execute_command": "sudo sh -c '{{ .Vars }} pwsh -f {{ .Path }}'"
+  },
+  {
+      "type": "shell",
+      "scripts": [
+          "scripts/azure/installers/azcopy.sh",
+          "scripts/azure/installers/azure-cli.sh",
+          "scripts/azure/installers/azure-devops-cli.sh",
+          "scripts/azure/installers/basic.sh",
+          "scripts/azure/installers/bicep.sh",
+          "scripts/azure/installers/aliyun-cli.sh",
+          "scripts/azure/installers/apache.sh",
+          "scripts/azure/installers/aws.sh",
+          "scripts/azure/installers/clang.sh",
+          "scripts/azure/installers/swift.sh",
+          "scripts/azure/installers/cmake.sh",
+          "scripts/azure/installers/codeql-bundle.sh",
+          "scripts/azure/installers/containers.sh",
+          "scripts/azure/installers/dotnetcore-sdk.sh",
+          "scripts/azure/installers/erlang.sh",
+          "scripts/azure/installers/firefox.sh",
+          "scripts/azure/installers/microsoft-edge.sh",
+          "scripts/azure/installers/gcc.sh",
+          "scripts/azure/installers/gfortran.sh",
+          "scripts/azure/installers/git.sh",
+          "scripts/azure/installers/github-cli.sh",
+          "scripts/azure/installers/google-chrome.sh",
+          "scripts/azure/installers/google-cloud-sdk.sh",
+          "scripts/azure/installers/haskell.sh",
+          "scripts/azure/installers/heroku.sh",
+          "scripts/azure/installers/hhvm.sh",
+          "scripts/azure/installers/java-tools.sh",
+          "scripts/azure/installers/kubernetes-tools.sh",
+          "scripts/azure/installers/oc.sh",
+          "scripts/azure/installers/leiningen.sh",
+          "scripts/azure/installers/miniconda.sh",
+          "scripts/azure/installers/mono.sh",
+          "scripts/azure/installers/kotlin.sh",
+          "scripts/azure/installers/mysql.sh",
+          "scripts/azure/installers/mssql-cmd-tools.sh",
+          "scripts/azure/installers/sqlpackage.sh",
+          "scripts/azure/installers/nginx.sh",
+          "scripts/azure/installers/nvm.sh",
+          "scripts/azure/installers/nodejs.sh",
+          "scripts/azure/installers/bazel.sh",
+          "scripts/azure/installers/oras-cli.sh",
+          "scripts/azure/installers/phantomjs.sh",
+          "scripts/azure/installers/php.sh",
+          "scripts/azure/installers/postgresql.sh",
+          "scripts/azure/installers/pulumi.sh",
+          "scripts/azure/installers/ruby.sh",
+          "scripts/azure/installers/r.sh",
+          "scripts/azure/installers/rust.sh",
+          "scripts/azure/installers/julia.sh",
+          "scripts/azure/installers/sbt.sh",
+          "scripts/azure/installers/selenium.sh",
+          "scripts/azure/installers/terraform.sh",
+          "scripts/azure/installers/packer.sh",
+          "scripts/azure/installers/vcpkg.sh",
+          "scripts/azure/installers/dpkg-config.sh",
+          "scripts/azure/installers/mongodb.sh",
+          "scripts/azure/installers/yq.sh",
+          "scripts/azure/installers/android.sh",
+          "scripts/azure/installers/pypy.sh",
+          "scripts/azure/installers/python.sh",
+          "scripts/azure/installers/graalvm.sh",
+          "scripts/azure/installers/zstd.sh"
+      ],
+      "environment_vars": [
+          "HELPER_SCRIPTS={{user `helper_script_folder`}}",
+          "INSTALLER_SCRIPT_FOLDER={{user `installer_script_folder`}}",
+          "DEBIAN_FRONTEND=noninteractive"
+      ],
+      "execute_command": "sudo sh -c '{{ .Vars }} {{ .Path }}'"
+  },
+  {
+      "type": "shell",
+      "scripts": [
+          "scripts/azure/installers/Install-Toolset.ps1",
+          "scripts/azure/installers/Configure-Toolset.ps1"
+      ],
+      "environment_vars": [
+          "HELPER_SCRIPTS={{user `helper_script_folder`}}",
+          "INSTALLER_SCRIPT_FOLDER={{user `installer_script_folder`}}"
+      ],
+      "execute_command": "sudo sh -c '{{ .Vars }} pwsh -f {{ .Path }}'"
+  },
+  {
+      "type": "shell",
+      "scripts": [
+          "scripts/azure/installers/pipx-packages.sh"
+      ],
+      "environment_vars": [
+          "HELPER_SCRIPTS={{user `helper_script_folder`}}",
+          "INSTALLER_SCRIPT_FOLDER={{user `installer_script_folder`}}"
+      ],
+      "execute_command": "sudo sh -c '{{ .Vars }} {{ .Path }}'"
+  },
+  {
+      "type": "shell",
+      "scripts": [
+          "scripts/azure/installers/homebrew.sh"
+      ],
+      "environment_vars": [
+          "HELPER_SCRIPTS={{user `helper_script_folder`}}",
+          "DEBIAN_FRONTEND=noninteractive",
+          "INSTALLER_SCRIPT_FOLDER={{user `installer_script_folder`}}"
+      ],
+      "execute_command": "/bin/sh -c '{{ .Vars }} {{ .Path }}'"
+  },
+  {
+      "type": "shell",
+      "script": "scripts/azure/base/snap.sh",
+      "execute_command": "sudo sh -c '{{ .Vars }} {{ .Path }}'"
+  },
+  {
+      "type": "shell",
+      "expect_disconnect": true,
+      "scripts": [
+          "scripts/azure/base/reboot.sh"
+      ],
+      "execute_command": "/bin/sh -c '{{ .Vars }} {{ .Path }}'"
+  },
+  {
+      "type": "shell",
+      "pause_before": "60s",
+      "start_retry_timeout": "10m",
+      "scripts": [
+          "scripts/azure/installers/cleanup.sh"
+      ],
+      "execute_command": "sudo sh -c '{{ .Vars }} {{ .Path }}'"
+  },
+  {
+      "type": "shell",
+      "script": "scripts/azure/base/apt-mock-remove.sh",
+      "execute_command": "sudo sh -c '{{ .Vars }} {{ .Path }}'"
+  },
+  {
+      "type": "shell",
+      "max_retries": 3,
+      "start_retry_timeout": "2m",
+      "inline": [
+          "pwsh -Command Write-Host Running SoftwareReport.Generator.ps1 script",
+          "pwsh -File {{user `image_folder`}}/SoftwareReport/SoftwareReport.Generator.ps1 -OutputDirectory {{user `image_folder`}}"
+      ],
+      "environment_vars": [
+          "IMAGE_VERSION={{user `image_version`}}",
+          "INSTALLER_SCRIPT_FOLDER={{user `installer_script_folder`}}"
+      ]
+  },
+  {
+      "type": "file",
+      "source": "{{user `image_folder`}}/software-report.md",
+      "destination": "{{template_dir}}/Ubuntu2004-Readme.md",
+      "direction": "download"
+  },
+  {
+      "type": "file",
+      "source": "{{user `image_folder`}}/software-report.json",
+      "destination": "{{template_dir}}/software-report.json",
+      "direction": "download"
+  },
+  {
+      "type": "shell",
+      "scripts":[
+          "scripts/azure/installers/post-deployment.sh"
+      ],
+      "environment_vars":[
+          "HELPER_SCRIPT_FOLDER={{user `helper_script_folder`}}",
+          "INSTALLER_SCRIPT_FOLDER={{user `installer_script_folder`}}",
+          "IMAGE_FOLDER={{user `image_folder`}}"
+      ],
+      "execute_command": "sudo sh -c '{{ .Vars }} {{ .Path }}'"
+  },
+  {
+      "type": "shell",
+      "scripts":[
+          "scripts/azure/installers/validate-disk-space.sh"
+      ],
+      "environment_vars": [
+          "RUN_VALIDATION={{user `run_validation_diskspace`}}"
+      ]
+  },
+  {
+      "type": "file",
+      "source": "scripts/azure/config/ubuntu2004.conf",
+      "destination": "/tmp/"
+  },
+  {
+      "type": "shell",
+      "inline": [
+          "mkdir -p /etc/vsts",
+          "cp /tmp/ubuntu2004.conf /etc/vsts/machine_instance.conf"
+      ],
+      "execute_command": "sudo sh -c '{{ .Vars }} {{ .Path }}'"
+  },
+  {
+    "environment_vars": [
+      "HOME_DIR=/home/vagrant"
+    ],
+    "execute_command": "echo 'vagrant' | {{.Vars}} sudo -S -E sh -eux '{{.Path}}'",
+    "expect_disconnect": true,
+    "scripts": [
+      "scripts/bash/ubuntu/minimize.sh"
+    ],
+    "type": "shell"
+  }
+  ],
+  "variables": {
+    "box_basename": "ubuntu-22.04",
+    "build_timestamp": "{{isotime \"20060102150405\"}}",
+    "headless": "",
+    "name": "ubuntu-19.04",
+    "image_folder": "/imagegeneration",
+    "imagedata_file": "/imagegeneration/imagedata.json",
+    "installer_script_folder": "/imagegeneration/installers",
+    "helper_script_folder": "/imagegeneration/helpers",
+    "ssh_user": "vagrant",
+    "ssh_pass": "vagrant",
+    "image_version": "dev",
+    "image_os": "ubuntu22.04",
+    "run_validation_diskspace": "false",
+    "target_vm":"Ubuntu22"
+  }
+}
+

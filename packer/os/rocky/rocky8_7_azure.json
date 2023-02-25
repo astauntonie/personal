@@ -1,0 +1,188 @@
+{
+  "variables": {
+      "boot_wait": "5s",
+      "disk_size": "40960",
+      "iso_checksum": "4827dce1c58560d3ca470a5053e8d86ba059cbb77cfca3b5f6a5863d2aac5b84",
+      "iso_checksum_type": "sha256",
+      "iso_name":"Rocky-8.7-x86_64-dvd1.iso",
+      "memsize": "2048",
+      "numvcpus": "2",
+      "ssh_password" : "vagrant",
+      "ssh_username" : "vagrant",
+      "vm_name": "RockyLinux8-Azure",
+      "box_name": "RockyLinux8-Azure",
+      "installer_script_folder": "/imagegeneration/installers",
+      "helper_script_folder": "/imagegeneration/helpers"
+    },
+    "builders": [
+      {
+        "type": "vmware-iso",
+        "name": "vmware",
+        "boot_command": [
+          "<tab> text inst.ks=http://192.168.1.6:{{ .HTTPPort }}/rocky/azure.ks<enter><wait>"
+        ],
+        "boot_wait": "{{ user `boot_wait` }}",
+        "disk_size": "{{ user `disk_size` }}",
+        "disk_type_id": "0",
+        "guest_os_type": "centos-64",
+        "headless": false,
+        "http_directory": "http",
+        "iso_checksum": "{{ user `iso_checksum` }}",
+        "iso_urls": [
+          "./iso/{{ user `iso_name` }}"
+        ],
+        "shutdown_command": "echo '{{user `ssh_password`}}'|sudo -S /sbin/halt -h -p",
+        "ssh_password": "{{ user `ssh_password` }}",
+        "ssh_port": 22,
+        "ssh_username": "{{ user `ssh_username` }}",
+        "ssh_timeout": "10500s",
+        "vm_name": "{{ user `vm_name` }}"
+      },
+      {
+        "type": "virtualbox-iso",
+        "name": "virtualbox",
+        "boot_command": [
+          "<tab> text inst.ks=http://192.168.1.6:{{ .HTTPPort }}/rocky/azure.ks<enter><wait>"
+        ],
+        "boot_wait": "{{ user `boot_wait` }}",
+        "disk_size": "{{ user `disk_size` }}",
+        "guest_os_type": "RedHat_64",
+        "headless": false,
+        "http_directory": "./http",
+        "iso_checksum": "{{ user `iso_checksum` }}",
+        "iso_urls": [
+          "./iso/{{ user `iso_name` }}"
+        ],
+        "shutdown_command": "echo '{{user `ssh_password`}}'|sudo -S /sbin/halt -h -p",
+        "ssh_password": "{{ user `ssh_password` }}",
+        "ssh_port": 22,
+        "ssh_username": "{{ user `ssh_username` }}",
+        "ssh_timeout": "10500s",
+        "vm_name": "{{ user `vm_name` }}",
+        "virtualbox_version_file": ".vbox_version",
+        "iso_interface": "sata",
+        "vboxmanage": [
+          ["modifyvm", "{{.Name}}", "--memory", "{{ user `memsize` }}"],
+          ["modifyvm", "{{.Name}}", "--cpus", "{{ user `numvcpus` }}"],
+          ["modifyvm", "{{.Name}}", "--graphicscontroller", "vmsvga"],
+          ["modifyvm", "{{.Name}}", "--vram", "16"]
+        ]
+      },
+      {
+        "type": "qemu",
+        "name": "qemu",
+        "format": "qcow2",
+        "accelerator": "kvm",
+        "disk_size": "{{ user `disk_size`}}",
+        "iso_checksum": "{{user `iso_checksum`}}",
+        "iso_urls": [
+          "./iso/{{ user `iso_name` }}"
+        ],
+        "http_directory": "http",
+        "ssh_username": "{{user `ssh_username`}}",
+        "ssh_password": "{{user `ssh_password`}}",
+        "ssh_wait_timeout": "10500s",
+        "shutdown_command": "echo '{{user `ssh_password`}}'|sudo -S /sbin/halt -h -p",
+        "boot_wait": "{{ user `boot_wait` }}",
+        "boot_command": [
+          "<tab> text inst.ks=http://192.168.1.6:{{ .HTTPPort }}/rocky/azure.ks<enter><wait>"
+          ]
+      }
+    ],
+    "post-processors": [
+      {
+        "keep_input_artifact": true,
+        "only": [
+          "virtualbox"
+        ],
+        "output": "builds/{{user `box_name`}}-virtualbox.box",
+        "type": "vagrant"
+      }
+    ],
+  "provisioners": [
+    {
+      "type": "shell",
+      "execute_command": "echo '{{user `ssh_password`}}'|{{.Vars}} sudo -S -E bash '{{.Path}}'",
+      "scripts": [
+            "scripts/bash/vagrant.sh",
+            "scripts/bash/rocky/containers.sh"
+      ]
+    },
+    {
+        "type": "file",
+        "source": "scripts/azure/helpers",
+        "destination": "{{user `helper_script_folder`}}"
+    },
+    {
+        "type": "file",
+        "source": "scripts/azure/post-generation",
+        "destination": "{{user `image_folder`}}"
+    },
+    {
+        "type": "file",
+        "source": "scripts/azure/installers",
+        "destination": "{{user `installer_script_folder`}}"
+    },
+    {
+        "type": "file",
+        "source": "scripts/azure/SoftwareReport",
+        "destination": "{{user `image_folder`}}"
+    },
+    {
+        "type": "file",
+        "source": "scripts/azure/helpers/software-report-base",
+        "destination": "{{user `image_folder`}}/SoftwareReport/"
+    },
+    {
+        "type": "file",
+        "source": "scripts/azure/toolsets/toolset-2204.json",
+        "destination": "{{user `installer_script_folder`}}/toolset.json"
+    },
+    {
+        "type": "shell",
+        "execute_command": "echo '{{user `ssh_password`}}'|{{.Vars}} sudo -S -E bash '{{.Path}}'",
+        "scripts": [
+              "scripts/bash/rocky/azure/installers/microsoft_tools.sh"
+        ]
+    },
+    {
+        "type": "shell",
+        "scripts": [
+            "scripts/azure/installers/Install-PowerShellModules.ps1",
+            "scripts/azure/installers/Install-AzureModules.ps1"
+        ],
+        "environment_vars": [
+            "HELPER_SCRIPTS={{user `helper_script_folder`}}",
+            "INSTALLER_SCRIPT_FOLDER={{user `installer_script_folder`}}"
+        ],
+        "execute_command": "sudo sh -c '{{ .Vars }} pwsh -f {{ .Path }}'"
+    },
+    {
+        "type": "shell",
+        "execute_command": "echo '{{user `ssh_password`}}'|{{.Vars}} sudo -S -E bash '{{.Path}}'",
+        "environment_vars": [
+            "HELPER_SCRIPTS={{user `helper_script_folder`}}",
+            "INSTALLER_SCRIPT_FOLDER={{user `installer_script_folder`}}",
+            "DEBIAN_FRONTEND=noninteractive"
+        ],
+        "scripts": [
+            "scripts/azure/installers/azcopy.sh",
+            "scripts/azure/installers/azure-devops-cli.sh",
+            "scripts/azure/installers/basic.sh",
+            "scripts/azure/installers/bicep.sh",
+            "scripts/azure/installers/aliyun-cli.sh",
+            "scripts/azure/installers/aws.sh",
+            "scripts/azure/installers/github-cli.sh",
+            "scripts/azure/installers/java-tools.sh"
+        ]
+    },
+    {
+        "type": "shell",
+        "execute_command": "echo '{{user `ssh_password`}}'|{{.Vars}} sudo -S -E bash '{{.Path}}'",
+        "scripts": [
+              "scripts/bash/cleanup.sh",
+              "scripts/bash/zerodisk.sh"
+        ]
+      }
+  ]
+}

@@ -10,3 +10,7 @@ else
 fi
 
 $YUMUP -y clean all
+
+if [[ -d /imagegeneration ]]; then
+  rm -rf /imagegeneration;
+fi;

@@ -9,8 +9,7 @@ Packer templates for the unattended creation of Virtual Machine images. Currentl
 ## Images
 Currently there are templates for
 + Rocky Linux
-+ Arch Linux
-+ Alpine Linux
+
 
 The majority of the build files expects an ISO to be found in teh iso sub-directory, although some have been created with a URL instead.
 

@@ -1,0 +1,111 @@
+{
+  "variables": {
+      "boot_wait": "5s",
+      "disk_size": "40960",
+      "iso_checksum": "4827dce1c58560d3ca470a5053e8d86ba059cbb77cfca3b5f6a5863d2aac5b84",
+      "iso_checksum_type": "sha256",
+      "iso_name":"Rocky-8.7-x86_64-dvd1.iso",
+      "memsize": "2048",
+      "numvcpus": "2",
+      "ssh_password" : "vagrant",
+      "ssh_username" : "vagrant",
+      "vm_name": "RockyLinux-8_7-DVD",
+      "box_name": "RockyLinux-8_7-DVD"
+    },
+    "builders": [
+      {
+        "type": "vmware-iso",
+        "name": "vmware",
+        "boot_command": [
+          "<tab> text inst.ks=http://192.168.1.6:{{ .HTTPPort }}/rocky/ks8_4_dvd.cfg<enter><wait>"
+        ],
+        "boot_wait": "{{ user `boot_wait` }}",
+        "disk_size": "{{ user `disk_size` }}",
+        "disk_type_id": "0",
+        "guest_os_type": "centos-64",
+        "headless": false,
+        "http_directory": "http",
+        "iso_checksum": "{{ user `iso_checksum` }}",
+        "iso_urls": [
+          "./iso/{{ user `iso_name` }}"
+        ],
+        "shutdown_command": "echo '{{user `ssh_password`}}'|sudo -S /sbin/halt -h -p",
+        "ssh_password": "{{ user `ssh_password` }}",
+        "ssh_port": 22,
+        "ssh_username": "{{ user `ssh_username` }}",
+        "ssh_timeout": "10500s",
+        "vm_name": "{{ user `vm_name` }}"
+      },
+      {
+        "type": "virtualbox-iso",
+        "name": "virtualbox",
+        "boot_command": [
+          "<tab> text inst.ks=http://192.168.1.6:{{ .HTTPPort }}/rocky/ks8_4_dvd.cfg<enter><wait>"
+        ],
+        "boot_wait": "{{ user `boot_wait` }}",
+        "disk_size": "{{ user `disk_size` }}",
+        "guest_os_type": "RedHat_64",
+        "headless": false,
+        "http_directory": "./http",
+        "iso_checksum": "{{ user `iso_checksum` }}",
+        "iso_urls": [
+          "./iso/{{ user `iso_name` }}"
+        ],
+        "shutdown_command": "echo '{{user `ssh_password`}}'|sudo -S /sbin/halt -h -p",
+        "ssh_password": "{{ user `ssh_password` }}",
+        "ssh_port": 22,
+        "ssh_username": "{{ user `ssh_username` }}",
+        "ssh_timeout": "10500s",
+        "vm_name": "{{ user `vm_name` }}",
+        "virtualbox_version_file": ".vbox_version",
+        "iso_interface": "sata",
+        "vboxmanage": [
+          ["modifyvm", "{{.Name}}", "--memory", "{{ user `memsize` }}"],
+          ["modifyvm", "{{.Name}}", "--cpus", "{{ user `numvcpus` }}"],
+          ["modifyvm", "{{.Name}}", "--graphicscontroller", "vmsvga"],
+          ["modifyvm", "{{.Name}}", "--vram", "16"]
+        ]
+      },
+      {
+        "type": "qemu",
+        "name": "qemu",
+        "format": "qcow2",
+        "accelerator": "kvm",
+        "disk_size": "{{ user `disk_size`}}",
+        "iso_checksum": "{{user `iso_checksum`}}",
+        "iso_urls": [
+          "./iso/{{ user `iso_name` }}"
+        ],
+        "http_directory": "http",
+        "ssh_username": "{{user `ssh_username`}}",
+        "ssh_password": "{{user `ssh_password`}}",
+        "ssh_wait_timeout": "10500s",
+        "shutdown_command": "echo '{{user `ssh_password`}}'|sudo -S /sbin/halt -h -p",
+        "boot_wait": "{{ user `boot_wait` }}",
+        "boot_command": [
+          "<tab> text inst.ks=http://192.168.1.6:{{ .HTTPPort }}/rocky/ks8_4_dvd.cfg<enter><wait>"
+          ]
+      }
+    ],
+    "post-processors": [
+      {
+        "keep_input_artifact": true,
+        "only": [
+          "virtualbox"
+        ],
+        "output": "builds/{{user `box_name`}}-virtualbox.box",
+        "type": "vagrant"
+      }
+    ],
+  "provisioners": [
+    {
+      "type": "shell",
+      "execute_command": "echo '{{user `ssh_password`}}'|{{.Vars}} sudo -S -E bash '{{.Path}}'",
+      "scripts": [
+            "scripts/bash/vagrant.sh",
+            "scripts/bash/cleanup.sh",
+            "scripts/bash/zerodisk.sh"
+      ]
+    }
+  ]
+}
